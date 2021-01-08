@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>KNN classifier example with ml5.js</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1> KNN classifier example with ml5.js </h1>
+
+        <div class="embed-responsive embed-responsive-16by9" id="videoContainer">
+            <video class="embed-responsive-item" id="videoElement"  autoplay></video>
+        </div>
+
+        <h2> Training </h2>
+        <p> Use the buttons below to take example images of rock, paper and scissors gestures. </p>
+        <button class="btn btn-outline-primary" onClick="addExample('rock')"> Rock </button>
+        <button class="btn btn-outline-primary" onClick="addExample('paper')"> Paper </button>
+        <button class="btn btn-outline-primary" onClick="addExample('scissors')"> Scissors </button>
+        <p id="exampleCounts">Example image count: 0</p>
+
+        <h2> Classification </h2>
+        <button class="btn btn-outline-primary" onClick="classify()"> Start classification </button>
+        <br>
+        <p> I think you are doing: </p>
+
+        <table class="table">
+            <tr>
+                <td class="w-25">Rock</td>
+                <td class="w-75"><div class="progress"><div id="rockPercent" class="progress-bar" style="width:0%"></div></div></td>
+            </tr>
+            <tr>
+                <td>Paper</td>
+                <td><div class="progress"><div id="paperPercent" class="progress-bar" style="width:0%"></div></div></td>
+            </tr>
+            <tr>
+                <td>Scissors</td>
+                <td><div class="progress"><div id="scissorsPercent" class="progress-bar" style="width:0%"></div></div></td>
+            </tr>
+        </table>
+        
+    
+    </div>
+
+
+    <script>
+
+        // Add the current frame from the video to the classifier
+        function addExample(label) {
+            // Get the features of the input video
+            const features = featureExtractor.infer(video);
+            // Add an example with a label to the classifier
+            knnClassifier.addExample(features, label);
+            document.getElementById("exampleCounts").innerHTML = "Example image count: " + JSON.stringify(knnClassifier.getCountByLabel());
+        }
+
+        // Predict the current frame.
+        function classify() {
+            const numLabels = knnClassifier.getNumLabels();
+            if (numLabels <= 0) {
+                console.error('There is no examples in any label');
+                return;
+            }
+            // Get the features of the input video
+            const features = featureExtractor.infer(video);
+
+            knnClassifier.classify(features, classifierCallback);
+        }
+
+        function classifierCallback(err, result) {
+            if (err) {
+                console.error(err);
+            }
+
+            if (result.confidencesByLabel) {
+                const confidences = result.confidencesByLabel;
+                // result.label is the label that has the highest confidence
+                console.log(result.label, confidences[result.label]);
+                if (result.label) {
+                    document.getElementById('rockPercent').style="width:" + Math.round(confidences['rock']*100) + "%";
+                    document.getElementById('paperPercent').style="width:" + Math.round(confidences['paper']*100) + "%";
+                    document.getElementById('scissorsPercent').style="width:" + Math.round(confidences['scissors']*100) + "%";
+                }
+            }
+            classify();
+        }
+
+
+
+        var video = document.querySelector("#videoElement");
+        if (navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+            .then(function (stream) {
+                video.srcObject = stream;
+            })
+            .catch(function (err) {
+                console.log("Something went wrong!");
+            });
+        }
+
+
+        // Create a KNN classifier
+        const knnClassifier = ml5.KNNClassifier();
+
+        // Create a featureExtractor that can extract features of an image
+        const featureExtractor = ml5.featureExtractor('MobileNet');
+
+
+    </script>
+</body>
+</html>
